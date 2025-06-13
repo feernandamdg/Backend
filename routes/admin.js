@@ -12,20 +12,21 @@ function verificarAdmin(req, res, next) {
   next()
 }
 
-// ✅ Obtener órdenes desde orden_detalle
+// ✅ Obtener órdenes desde orden_detalle con nombre completo del cliente
 router.get('/ordenes', verificarAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT o.id, o.fecha, u.nombre AS cliente, o.total,
-        json_agg(json_build_object(
-          'producto', od.nombre,
-          'cantidad', od.cantidad,
-          'precio', od.precio
-        )) AS productos
+      SELECT o.id, o.fecha, o.total,
+             u.nombre || ' ' || u.apellido AS cliente,
+             json_agg(json_build_object(
+               'producto', od.nombre,
+               'cantidad', od.cantidad,
+               'precio', od.precio
+             )) AS productos
       FROM ordenes o
       JOIN usuarios u ON o.usuario_id = u.id
       JOIN orden_detalle od ON od.orden_id = o.id
-      GROUP BY o.id, u.nombre
+      GROUP BY o.id, u.nombre, u.apellido, o.fecha, o.total
       ORDER BY o.fecha DESC
     `)
     res.json(result.rows)
@@ -34,6 +35,8 @@ router.get('/ordenes', verificarAdmin, async (req, res) => {
     res.status(500).json({ error: 'Error al obtener pedidos' })
   }
 })
+
+
 
 // ✅ Agregar nuevo producto
 router.post('/productos', verificarAdmin, async (req, res) => {
